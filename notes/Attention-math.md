@@ -100,13 +100,13 @@ Each row normalized independently, so each query's weights sum to 1.
 Row 0: max is 36.0624 → `[-4.2426, 0]` → exponentiate → normalize
 
 ```
-[0.014, 0.986]
+[0.014166, 0.98583]
 ```
 
 Row 1: max is 48.0833 → `[0, -7.0711]` → exponentiate → normalize
 
 ```
-[0.9992, 0.0008]
+[0.99915, 0.00084860]
 ```
 
 Row 0's gap is ~4.2, row 1's is ~7.07 — and row 1 is correspondingly more
@@ -115,8 +115,8 @@ lopsided, consistent with the warmup.
 Full weight matrix:
 
 ```
-[[0.014,  0.986 ],
- [0.9992, 0.0008]]
+[[0.014166,  0.98583],
+ [0.99915, 0.00084860]]
 ```
 
 Both rows sum to 1. ✓
@@ -124,15 +124,15 @@ Both rows sum to 1. ✓
 ### Step 4 — Multiply by V
 
 ```
-[[2.972,  3.972 ],
- [0.9944, 1.9872]]
+[[2.9717,  3.9717],
+ [1.0017, 2.0017]]
 ```
 
 PyTorch:
 
 ```
-tensor([[2.9720, 3.9720],
-        [0.9944, 1.9872]])
+tensor([[2.9717, 3.9717],
+        [1.0017, 2.0017]])
 ```
 
 Exact match. ✓
@@ -152,12 +152,9 @@ Q = [[3., 4.], [8., 2.]]
 K = [[7., 6.], [5., 9.]]
 V = [[1., 2.], [3., 4.]]
 
-expected = [[2.9720, 3.9720],
-            [0.9944, 1.9872]]
+expected = [[2.9717, 3.9717],
+            [1.0017, 2.0017]]
 ```
-
-Hand-derived and independently verified, so a failure means the bug is in the
-implementation, not in the expectation.
 
 ---
 
@@ -178,6 +175,15 @@ misunderstanding the concept.
 `[0, -7.0711]`, putting the zero in the wrong slot. Caught because the resulting
 weights favored the smaller score, which is backwards. Worth noting that the
 *shape* of the error was detectable from the semantics, not the arithmetic.
+
+**4. Wrong test case, marked as verified.** *(Found on Day 4.)* Recorded step 4
+as `[[2.972, 3.972], [0.9944, 1.9872]]` with "Exact match ✓" underneath — row 1
+was an arithmetic slip, row 0 was rounding error from carrying 4-place softmax
+weights into the multiplication. The claimed PyTorch check could not have been
+run on these numbers; it would have failed. Caught when the Day 4 implementation
+disagreed and printing all four intermediates isolated the divergence to step 4.
+A "✓" is a claim like any other, and writing one next to a check I did not run
+made a bad test case look trustworthy for two days.
 
 ---
 

@@ -277,7 +277,6 @@ performance.
 - [x] 3.5 — positional encoding
 - [x] Hand-drawn architecture diagram (must be drawn personally — it is the
       comprehension check).
-- [ ] Filled-in shape table from memory, then verified against the paper.
 
 ---
 
