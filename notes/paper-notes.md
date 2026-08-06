@@ -5,7 +5,7 @@
 **Goal:** Understand the architecture well enough to draw it from memory and
 fill in the shape table.
 
-**Status:** Sections 3.1–3.3 covered. 3.4 and 3.5 still to read.
+**Status:** Section 3 complete (3.1–3.5). Diagram and shape table still to do.
 
 ---
 
@@ -181,11 +181,100 @@ the FFN the simplest module in the model: Linear → ReLU → Linear. Day 9.
 
 ---
 
+## 3.4 — Embeddings and Softmax
+
+### Weight sharing across three places
+
+The same weight matrix is shared between:
+
+1. The encoder input embedding
+2. The decoder input embedding
+3. The pre-softmax linear transformation (the final layer producing logits)
+
+**Why this is sensible:** the embedding layer maps a token ID to a vector. The
+final linear layer does the reverse — takes a vector and scores it against every
+token in the vocabulary. Same relationship between tokens and vectors, read in
+opposite directions, so one matrix serves both.
+
+**Practical effect:** far fewer parameters. That matrix is
+`vocab_size × d_model`. For a 37,000-token vocabulary at `d_model = 512` that is
+roughly 19 million numbers — stored once instead of three times.
+
+### The √d_model scaling
+
+Embedding weights are multiplied by `√d_model` before use. At `d_model = 512`
+that is a factor of about 22.6.
+
+The paper states this without justification. The generally accepted reason:
+embedding weights initialize small (roughly unit variance, so values around ±1),
+while positional encodings are sines and cosines ranging over the full −1 to 1.
+Added together unscaled, the positional signal would be comparable in magnitude
+to the token identity itself. Scaling the embeddings up first makes token
+content dominate and lets position act as a modifier.
+
+**Note the contrast with `√d_k`:** the attention scaling has a clean derivation
+from the variance argument. This one is an empirical choice the authors made
+without explaining. File it as "do it because the paper does" and revisit if it
+ever seems to matter.
+
+---
+
+## 3.5 — Positional Encoding
+
+### Why it is needed at all
+
+Attention computes pairwise dot products between tokens, and a dot product does
+not care where its two vectors came from. Shuffle the token order and you get
+the same set of scores, just relabeled.
+
+So self-attention alone cannot distinguish "the cat sat" from "sat cat the".
+Position has to be injected into the token representations *before* attention
+sees them, because attention itself cannot recover it.
+
+### The formula
+
+Varies along two axes:
+
+- **`pos`** — position in the sequence (token 0, 1, 2, …)
+- **`i`** — which dimension of the vector. Even dimensions get sine, odd get
+  cosine.
+
+Every `(position, dimension)` pair gets its own value. The result is a matrix,
+which is why plotting it as a heatmap on Day 8 shows structure rather than
+noise.
+
+### Why sinusoids rather than learned embeddings
+
+Two reasons given:
+
+**1. Relative position.** From the paper: for any fixed offset `k`, `PE(pos+k)`
+can be represented as a linear function of `PE(pos)`.
+
+This means "three tokens back" is the *same* linear transformation whether you
+are at position 5 or position 500. The model can learn one operation instead of
+memorizing the relationship separately at every position.
+
+It is a property of sinusoids specifically — it falls out of the angle addition
+formulas, where `sin(a+b)` and `cos(a+b)` expand into combinations of `sin(a)`,
+`cos(a)`, `sin(b)`, `cos(b)`. A fixed offset means fixed coefficients.
+
+**2. Extrapolation to longer sequences.** A learned position embedding table has
+a fixed number of rows, so position 600 simply does not exist if training only
+went to 512. A formula has no such limit — it can be evaluated at any position.
+
+### The honest caveat
+
+The paper also reports experimenting with learned positional embeddings and
+finding nearly identical results. So the sinusoids are not magic. The
+extrapolation property is the practical argument for them, not measured
+performance.
+
+---
+
 ## Still To Do
 
-- [ ] 3.4 — embeddings and softmax. Watch for a weight-sharing detail across
-      three places, and a scaling factor applied to the embeddings.
-- [ ] 3.5 — positional encoding. The sinusoid formula for Day 8.
+- [x] 3.4 — embeddings and softmax
+- [x] 3.5 — positional encoding
 - [ ] Hand-drawn architecture diagram (must be drawn personally — it is the
       comprehension check).
 - [ ] Filled-in shape table from memory, then verified against the paper.
