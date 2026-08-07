@@ -42,7 +42,6 @@ def merge_heads(x):
     H = x.shape[1]
     d_k = x.shape[3]
     last_transform = second_transform.view(B, S, H * d_k)
-    print(second_transform.is_contiguous())
     return last_transform
     
 
