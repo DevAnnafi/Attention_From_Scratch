@@ -1,6 +1,7 @@
 import torch 
 import torch.nn as nn
 import math
+from src.attention import MultiHeadAttention
 
 class FeedForward(nn.Module):
     def __init__(self, d_model, d_ff):
@@ -26,3 +27,22 @@ class LayerNorm(nn.Module):
 
     def forward(self, x):
         return self.ln(x)
+
+class EncoderLayer(nn.Module):
+    def __init__(self, d_model, num_heads, d_ff):
+        super().__init__()
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.d_ff = d_ff
+        self.attention = MultiHeadAttention(d_model, num_heads)
+        self.ffn = FeedForward(d_model, d_ff)
+        self.norm1 = LayerNorm(d_model)
+        self.norm2 = LayerNorm(d_model)
+
+    def forward(self, x):
+        x1 = self.norm1(x + self.attention(x,x,x))
+        x2 = self.norm2(x1 + self.ffn(x1))
+        return x2
+
+        
+        
