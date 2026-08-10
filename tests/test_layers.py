@@ -1,6 +1,6 @@
 import torch 
 import torch.nn as nn
-from src.layers import FeedForward, LayerNorm, EncoderLayer
+from src.layers import FeedForward, LayerNorm, EncoderLayer, Encoder
 
 def test_feed_forward():
     B = 2
@@ -31,4 +31,16 @@ def test_encoder_layer_shape():
     x = torch.randn(B, S, d_model)
     el = EncoderLayer(d_model, num_heads, d_ff)
     out = el(x)
+    assert out.shape == (B, S, d_model)
+
+def test_encoder_shape():
+    B = 2
+    S = 6
+    d_model = 8
+    num_heads = 4
+    d_ff = 7
+    N = 3
+    x = torch.randn(B, S, d_model)
+    e = Encoder(d_model, num_heads, d_ff, N)
+    out = e(x)
     assert out.shape == (B, S, d_model)

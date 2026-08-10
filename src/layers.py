@@ -44,5 +44,21 @@ class EncoderLayer(nn.Module):
         x2 = self.norm2(x1 + self.ffn(x1))
         return x2
 
+class Encoder(nn.Module):
+    def __init__(self, d_model, num_heads, d_ff, N):
+        super().__init__()
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.d_ff = d_ff
+        self.N = N
+        self.layers = nn.ModuleList([EncoderLayer(d_model, num_heads, d_ff) for _ in range(N)])
+
+    def forward(self, x):
+        result = x
+        for layer in self.layers:
+            result = layer(result)
+        return result
+
+
         
         
