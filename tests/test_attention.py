@@ -35,6 +35,7 @@ def test_h1_equivalence():
         mha.W_O.weight.copy_(torch.eye(d_model))
         mha.W_O.bias.copy_(torch.zeros(d_model))
     x = torch.randn(B, S, d_model)
+    mha.eval()
     assert torch.allclose(mha(x,x,x), attention(x,x,x))
 
 

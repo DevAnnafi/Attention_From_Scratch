@@ -1,22 +1,25 @@
-import torch 
+import torch
 import torch.nn as nn
 import math
-import matplotlib.pyplot as plt
+
 
 class TokenEmbedding(nn.Module):
-    def __init__(self, vocab_size, d_model):
+    def __init__(self, vocab_size, d_model, dropout=0.1):
         super().__init__()
         self.vocab_size = vocab_size
         self.d_model = d_model
         self.embedding = nn.Embedding(vocab_size, d_model)
         self.scale = math.sqrt(d_model)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
-        return self.embedding(x) * self.scale
+        return self.dropout(self.embedding(x) * self.scale)
+
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, max_len):
+    def __init__(self, d_model, max_len, dropout=0.1):
         super().__init__()
+        self.dropout = nn.Dropout(dropout)
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len)
         div_term = torch.exp(torch.arange(0, d_model, 2) * -(math.log(10000.0) / d_model))
@@ -26,16 +29,4 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x):
         S = x.shape[1]
-        return x + self.pe[:S]
-
-pe_module = PositionalEncoding(d_model=64, max_len=100)
-plt.imshow(pe_module.pe.numpy(), aspect='auto', cmap='RdBu')
-plt.colorbar()
-plt.xlabel('Dimension')
-plt.ylabel('Position')
-plt.title('Positional Encoding')
-plt.show()
-
-        
-
-
+        return self.dropout(x + self.pe[:S])
