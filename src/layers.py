@@ -81,6 +81,21 @@ class DecoderLayer(nn.Module):
         x = self.norm3(x + feed_forward)
         return x
 
+class Decoder(nn.Module):
+    def __init__(self, d_model, num_heads, d_ff, N):
+         super().__init__()
+         self.d_model = d_model
+         self.num_heads = num_heads
+         self.d_ff = d_ff
+         self.N = N
+         self.layers = nn.ModuleList([DecoderLayer(d_model, num_heads, d_ff) for _ in range(N)])
+         
+    def forward(self, x, encoder_output, src_mask=None, tgt_mask=None):
+        result = x
+        for layer in self.layers:
+            result = layer(result, encoder_output, src_mask, tgt_mask)
+        return result
+
 
 
 
