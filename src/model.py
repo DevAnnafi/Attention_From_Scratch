@@ -96,9 +96,6 @@ class Transformer(nn.Module):
     def _init_weights(self, d_model: int):
         """Xavier uniform for all non-embedding params; N(0, d_model^-0.5) for embeddings."""
         for name, p in self.named_parameters():
-            if p is self.projection.weight:
-                # Tied weight — initialized once via tgt_embed below
-                continue
             if 'embedding' in name:
                 # Embedding rows: N(0, d_model^-0.5)
                 # At WMT14 scale this is ~0.044; Xavier gives ~0.007 (6x too small)
