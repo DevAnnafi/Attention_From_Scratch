@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import math
 from src.embedding import TokenEmbedding, PositionalEncoding
 from src.layers import Encoder, Decoder
 
@@ -8,10 +9,12 @@ class LabelSmoothingLoss(nn.Module):
     """Label smoothing loss — section 5.4.
 
     Smoothing=0.1: model is penalized for overconfidence.
-    Target distribution: (1-eps) on correct class, eps/(V-1) elsewhere.
+    Target distribution: (1-eps) on correct class, eps/(V-2) on non-pad classes.
+
+    Fix: <pad> column receives zero smoothing mass at every real position,
+    and pad rows are excluded entirely from both numerator and denominator.
 
     Works on 3D input (B, T, V) — flattens to (B*T, V) internally.
-    Padding tokens (pad_idx) are excluded from the loss and denominator.
     """
     def __init__(self, vocab_size: int, pad_idx: int = 0, smoothing: float = 0.1):
         super().__init__()
@@ -33,10 +36,13 @@ class LabelSmoothingLoss(nn.Module):
         log_probs = torch.log_softmax(logits, dim=-1)
 
         with torch.no_grad():
-            smooth = self.smoothing / (V - 1)
+            # Distribute smoothing mass over (V - 2) classes — exclude correct
+            # class AND <pad>. This prevents the model from learning to emit padding.
+            smooth = self.smoothing / (V - 2)
             dist = torch.full_like(log_probs, smooth)
+            dist[:, self.pad_idx] = 0.0                          # zero pad column
             dist.scatter_(1, target.unsqueeze(1), 1.0 - self.smoothing)
-            dist[target == self.pad_idx] = 0.0  # zero out pad rows entirely
+            dist[target == self.pad_idx] = 0.0                   # zero pad rows
 
         loss = self.criterion(log_probs, dist)
         non_pad = (target != self.pad_idx).sum().clamp(min=1)
@@ -47,8 +53,13 @@ class Transformer(nn.Module):
     """Full encoder-decoder Transformer (Vaswani et al., 2017).
 
     Weight tying (section 3.4):
-      target embedding ↔ output projection share one matrix.
+      target embedding <-> output projection share one matrix.
       Source embedding is separate (enables different src/tgt vocabs).
+
+    Initialization:
+      - All linear/projection layers: Xavier uniform (standard for transformers)
+      - Embedding matrix: N(0, d_model^-0.5) — NOT Xavier, which is 6x too
+        small at WMT14 scale (V=37k, d_model=512) and causes slow warmup.
 
     Args:
         d_model:    model dimension
@@ -80,11 +91,19 @@ class Transformer(nn.Module):
         # Weight tying — target embedding and output projection share weights
         self.tgt_embed.embedding.weight = self.projection.weight
 
-        self._init_weights()
+        self._init_weights(d_model)
 
-    def _init_weights(self):
-        for p in self.parameters():
-            if p.dim() > 1:
+    def _init_weights(self, d_model: int):
+        """Xavier uniform for all non-embedding params; N(0, d_model^-0.5) for embeddings."""
+        for name, p in self.named_parameters():
+            if p is self.projection.weight:
+                # Tied weight — initialized once via tgt_embed below
+                continue
+            if 'embedding' in name:
+                # Embedding rows: N(0, d_model^-0.5)
+                # At WMT14 scale this is ~0.044; Xavier gives ~0.007 (6x too small)
+                nn.init.normal_(p, mean=0.0, std=d_model ** -0.5)
+            elif p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
     def encode(self, src: torch.Tensor, src_mask=None) -> torch.Tensor:
