@@ -1,6 +1,6 @@
 # Attention Is All You Need — From Scratch
 
-A meticulous, zero-shortcut implementation of the original Transformer architecture in pure PyTorch, written entirely from scratch without AI assistance.
+A meticulous, zero-shortcut implementation of the original Transformer architecture in pure PyTorch, written entirely from scratch.
 
 The goal of this project is to build a deep, first-principles understanding of the mathematical mechanics behind modern Large Language Models by avoiding high-level abstractions (`torch.nn.Transformer`) and implementing the tensor transformations manually.
 
